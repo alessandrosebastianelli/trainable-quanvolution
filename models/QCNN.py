@@ -33,7 +33,7 @@ class HybridQCNN(pl.LightningModule):
             torch.nn.ReLU(),
             torch.nn.AvgPool2d(kernel_size=2, stride=2),
             # Conv Layer 2
-            torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5, stride=1),
+            torch.nn.Conv2d(in_channels=9, out_channels=64, kernel_size=5, stride=1),
             torch.nn.ReLU(),
             torch.nn.AvgPool2d(kernel_size=2, stride=2),
             # Conv Layer 3
@@ -52,6 +52,7 @@ class HybridQCNN(pl.LightningModule):
        
     def forward(self, x):
         x_output = self.model(x)
+        print(x_output.shape)
         return x_output
 
     def training_step(self, batch, batch_idx):

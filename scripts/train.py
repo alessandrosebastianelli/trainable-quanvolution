@@ -14,7 +14,7 @@ from dataio.loader import EuroSATDataModule
 if __name__ == "__main__":
     torch.set_float32_matmul_precision('high')
 
-    data_module = EuroSATDataModule(num_workers=16, batch_size=16)
+    data_module = EuroSATDataModule(num_workers=8, batch_size=1)
 
     tb_logger = pl.loggers.TensorBoardLogger(os.path.join('lightning_logs','classifiers'), name='EuroSATClassifier')
 
