@@ -6,12 +6,13 @@ import sys
 sys.path += ['.', '..', './', '../']
 
 
-from hqm.circuits.angleencoding import StronglyEntangledCircuit
+from hqm.circuits.angleencoding import StronglyEntangledCircuit, BasicEntangledCircuit
 from hqm.layers.quanvolution import Quanvolution2D
 import pennylane as qml
 
 
 class HybridQCNN(pl.LightningModule):
+    # https://discuss.pennylane.ai/t/issues-installing-and-running-pennylane-lightning-gpu/3612/11
 
     def __init__(self, in_channels=3, out_dim=10, epochs=0, dataset_size=0):
         super(HybridQCNN, self).__init__()
@@ -20,24 +21,22 @@ class HybridQCNN(pl.LightningModule):
         self.dataset_size = dataset_size
         self.loss         = torch.nn.CrossEntropyLoss()
 
-        NUM_QUBITS = 9
-        NUM_LAYERS = 3
+        NUM_QUBITS = 4
+        NUM_LAYERS = 1
         dev               = qml.device("lightning.qubit", wires=NUM_QUBITS)
-        circ              = StronglyEntangledCircuit(n_qubits=NUM_QUBITS, n_layers=NUM_LAYERS, dev=dev)
-        ql                = Quanvolution2D(qcircuit=circ, filters=9, kernelsize=3, stride=1, aiframework='torch')
-
+        circ              = BasicEntangledCircuit(n_qubits=NUM_QUBITS, n_layers=NUM_LAYERS, dev=dev)
+        self.ql           = Quanvolution2D(qcircuit=circ, filters=NUM_QUBITS, kernelsize=2, stride=1, aiframework='torch')
 
         self.model = torch.nn.Sequential(
-            #torch.nn.Conv2d(in_channels=in_channels, out_channels=32, kernel_size=5, stride=1, padding=2),        
-            ql,
+            #torch.nn.Conv2d(in_channels=in_channels, out_channels=32, kernel_size=5, stride=1, padding=2), 
             torch.nn.ReLU(),
-            torch.nn.AvgPool2d(kernel_size=2, stride=2),
+            #torch.nn.AvgPool2d(kernel_size=2, stride=2),
             # Conv Layer 2
-            torch.nn.Conv2d(in_channels=9, out_channels=64, kernel_size=5, stride=1),
+            torch.nn.Conv2d(in_channels=NUM_QUBITS, out_channels=64, kernel_size=3, stride=1),
             torch.nn.ReLU(),
-            torch.nn.AvgPool2d(kernel_size=2, stride=2),
+            #torch.nn.AvgPool2d(kernel_size=2, stride=2),
             # Conv Layer 3
-            torch.nn.Conv2d(in_channels=64, out_channels=128, kernel_size=5, stride=1),
+            torch.nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1),
             torch.nn.ReLU(),
             # Flatten
             torch.nn.Flatten(),
@@ -51,8 +50,12 @@ class HybridQCNN(pl.LightningModule):
         )
        
     def forward(self, x):
-        x_output = self.model(x)
-        print(x_output.shape)
+
+        xq = self.ql(x).to(x.device)
+        #print(x.device, xq.device)
+        #print(x.shape, xq.shape)
+        x_output = self.model(xq)
+        
         return x_output
 
     def training_step(self, batch, batch_idx):

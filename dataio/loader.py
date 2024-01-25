@@ -34,8 +34,10 @@ class EuroSATDataset(Dataset):
     def __getitem__(self, idx):
         img_path, label = self.data[idx]
         image = Image.open(img_path).convert('RGB')
-        if self.transform:
-            image = self.transform(image)
+
+        #image = image.resize((8,8), Image.LANCZOS)
+
+        if self.transform: image = self.transform(image)
 
         return image, label
 

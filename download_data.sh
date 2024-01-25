@@ -15,3 +15,5 @@ mv EuroSAT training
 cd ..
 
 python scripts/split_dataset.py
+
+rm EuroSAT.zip
