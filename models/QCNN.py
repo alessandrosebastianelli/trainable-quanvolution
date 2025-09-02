@@ -21,23 +21,26 @@ class HybridQCNN(pl.LightningModule):
         self.dataset_size = dataset_size
         self.loss         = torch.nn.CrossEntropyLoss()
 
-        NUM_QUBITS = 4
+        NUM_QUBITS = 9
         NUM_LAYERS = 1
-        dev               = qml.device("lightning.qubit", wires=NUM_QUBITS)
+        dev               = qml.device("lightning.gpu", wires=NUM_QUBITS)
         circ              = BasicEntangledCircuit(n_qubits=NUM_QUBITS, n_layers=NUM_LAYERS, dev=dev)
-        self.ql           = Quanvolution2D(qcircuit=circ, filters=NUM_QUBITS, kernelsize=2, stride=1, aiframework='torch')
+        self.ql           = Quanvolution2D(qcircuit=circ, filters=NUM_QUBITS, kernelsize=3, stride=1, aiframework='torch')
 
-        self.model = torch.nn.Sequential(
-            #torch.nn.Conv2d(in_channels=in_channels, out_channels=32, kernel_size=5, stride=1, padding=2), 
+        self.conv = torch.nn.Sequential(
+            torch.nn.Conv2d(in_channels=in_channels, out_channels=8, kernel_size=5, stride=1, padding=2), 
             torch.nn.ReLU(),
             #torch.nn.AvgPool2d(kernel_size=2, stride=2),
             # Conv Layer 2
-            torch.nn.Conv2d(in_channels=NUM_QUBITS, out_channels=64, kernel_size=3, stride=1),
+            torch.nn.Conv2d(in_channels=8, out_channels=16, kernel_size=3, stride=1),
             torch.nn.ReLU(),
             #torch.nn.AvgPool2d(kernel_size=2, stride=2),
             # Conv Layer 3
-            torch.nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1),
-            torch.nn.ReLU(),
+            torch.nn.Conv2d(in_channels=16, out_channels=NUM_QUBITS, kernel_size=3, stride=1),
+            torch.nn.ReLU()
+        )
+
+        self.fully = torch.nn.Sequential(
             # Flatten
             torch.nn.Flatten(),
             # Fully Connected Layer 1
@@ -50,11 +53,12 @@ class HybridQCNN(pl.LightningModule):
         )
        
     def forward(self, x):
-
-        xq = self.ql(x).to(x.device)
+        dvc = x.device        
+        x = self.conv(x)
+        xq = self.ql(x).to(dvc)
         #print(x.device, xq.device)
-        #print(x.shape, xq.shape)
-        x_output = self.model(xq)
+        print(x.shape, xq.shape)
+        x_output = self.fully(xq)
         
         return x_output
 
